@@ -1,0 +1,10 @@
+version: 0.0
+Resources:
+  - TargetService:
+      Type: AWS::ECS::Service
+      Properties:
+        TaskDefinition: "arn:aws:ecs:ca-central-1:{your-acccount}:task-definition/{system}:28"
+        LoadBalancerInfo:
+          ContainerName: "web"
+          ContainerPort: 80
+        PlatformVersion: "1.4.0"

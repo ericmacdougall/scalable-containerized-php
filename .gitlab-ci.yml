@@ -1,0 +1,46 @@
+default:
+  image:
+    name: python:3.8
+
+variables:
+  DOCKER_REGISTRY: {your-account}.dkr.ecr.ca-central-1.amazonaws.com
+  AWS_DEFAULT_REGION: ca-central-1
+  APP_NGINX_NAME: system-nginx
+  APP_PHP_NAME: system-php-fpm
+  APP_STACK_NAME: system-stack
+  DOCKER_HOST: tcp://docker:2375
+
+stages:
+  - build
+  - deploy
+
+publish:
+  stage: build
+  only:
+    - container
+  image: 
+    name: amazon/aws-cli
+    entrypoint: [""]
+  services:
+    - docker:dind
+  before_script:
+    - amazon-linux-extras install docker
+    - aws --version
+    - docker --version
+  script:
+    - docker build -t $DOCKER_REGISTRY/$APP_NGINX_NAME:$CI_PIPELINE_IID -t $DOCKER_REGISTRY/$APP_NGINX_NAME:latest -f docker/nginx/Dockerfile . 
+    - docker build -t $DOCKER_REGISTRY/$APP_PHP_NAME:$CI_PIPELINE_IID -t $DOCKER_REGISTRY/$APP_PHP_NAME:latest -f docker/php-fpm/Dockerfile . 
+    # - docker build -t $DOCKER_REGISTRY/$APP_STACK_NAME:$CI_PIPELINE_IID -t $DOCKER_REGISTRY/$APP_STACK_NAME:latest -f docker/php-fpm/Dockerfile . 
+    - aws ecr get-login-password | docker login --username AWS --password-stdin $DOCKER_REGISTRY
+    - docker push $DOCKER_REGISTRY/$APP_NGINX_NAME
+    - docker push $DOCKER_REGISTRY/$APP_PHP_NAME
+    # - docker push $DOCKER_REGISTRY/$APP_STACK_NAME
+
+deploy_app:
+  stage: deploy
+  only:
+    - container
+  script:
+    - echo "Deploying"
+    - python3.8 -m pip install awscli
+    - /bin/bash ./scripts/deploy.sh
